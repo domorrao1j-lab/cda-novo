@@ -352,29 +352,34 @@ function evaluationPickerEmbed(state = {}) {
   return new EmbedBuilder()
     .setColor(ORANGE)
     .setTitle(`${EVAL_EMOJIS.title} Avaliar Staff`)
-    .setDescription(`${EVAL_EMOJIS.user} **Membro:** ${target}\n${EVAL_EMOJIS.title} **Nota:** ${score}\n\nDepois de selecionar os dois campos, clique em **Continuar**.`);
+    .setDescription(`${EVAL_EMOJIS.user} **Membro:** ${target}\n${EVAL_EMOJIS.title} **Nota:** ${score}\n\nSelecione o membro, toque na nota e depois clique em **Continuar**.`)
+    .setFooter({ text: 'Sistema de Avaliação V3' });
 }
 
 function evaluationPickerComponents(state = {}) {
-  // Não usa `description` nas opções: a API do Discord rejeitou esse campo
-  // neste menu com BASE_TYPE_MAX_LENGTH em alguns deploys. Mantemos tudo no label.
-  const stars = [0,1,2,3,4,5].map(n => new StringSelectMenuOptionBuilder()
-    .setLabel(n === 0 ? '0/5 — Nota mínima' : `${n}/5 — ${'⭐'.repeat(n)}${'☆'.repeat(5-n)}`)
-    .setValue(String(n)));
+  // V3: a nota usa somente botões. Assim não existe StringSelect option/description
+  // para a API do Discord rejeitar por limite de texto.
+  const scoreButton = (n) => new ButtonBuilder()
+    .setCustomId(`cda_eval_score_${n}`)
+    .setLabel(`${n}/5`)
+    .setStyle(state.score === n ? ButtonStyle.Primary : ButtonStyle.Secondary);
+
   return [
     one(new UserSelectMenuBuilder()
       .setCustomId('cda_eval_pick_user')
       .setPlaceholder(state.targetId ? 'Membro selecionado ✓' : 'Selecione o membro')
       .setMinValues(1).setMaxValues(1)),
-    one(new StringSelectMenuBuilder()
-      .setCustomId('cda_eval_pick_score')
-      .setPlaceholder(state.score !== undefined ? `Nota selecionada: ${state.score}/5` : 'Selecione a nota de 0 a 5')
-      .addOptions(stars)),
-    one(new ButtonBuilder()
-      .setCustomId('cda_eval_continue')
-      .setLabel('Continuar')
-      .setEmoji(EVAL_EMOJIS.correct)
-      .setStyle(ButtonStyle.Success)),
+    new ActionRowBuilder().addComponents(
+      scoreButton(0), scoreButton(1), scoreButton(2), scoreButton(3), scoreButton(4)
+    ),
+    new ActionRowBuilder().addComponents(
+      scoreButton(5),
+      new ButtonBuilder()
+        .setCustomId('cda_eval_continue')
+        .setLabel('Continuar')
+        .setEmoji(EVAL_EMOJIS.correct)
+        .setStyle(ButtonStyle.Success)
+    ),
   ];
 }
 
@@ -716,12 +721,16 @@ function setupManagementExtras(client, startupReady = Promise.resolve()) {
         return interaction.update({ content:null, embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) });
       }
 
-      if (interaction.isStringSelectMenu() && interaction.customId === 'cda_eval_pick_score') {
+      if (interaction.isButton() && interaction.customId.startsWith('cda_eval_score_')) {
         let st = getEvalDraft(interaction);
         if (!st) {
           return interaction.reply({ content:'⚠️ Sua avaliação expirou. Clique em **Avaliar Staff** novamente.', flags: MessageFlags.Ephemeral });
         }
-        st = setEvalDraft(interaction, { score: Number(interaction.values[0]) });
+        const score = Number(interaction.customId.replace('cda_eval_score_', ''));
+        if (!Number.isInteger(score) || score < 0 || score > 5) {
+          return interaction.reply({ content:'❌ Nota inválida.', flags: MessageFlags.Ephemeral });
+        }
+        st = setEvalDraft(interaction, { score });
         return interaction.update({ content:null, embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) });
       }
 
