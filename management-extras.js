@@ -668,19 +668,23 @@ function setupManagementExtras(client, startupReady = Promise.resolve()) {
 
       if (interaction.isButton() && interaction.customId === 'cda_eval_start') {
         if (c.evaluation.evaluatorRoleIds.length && !hasRole(interaction, c.evaluation.evaluatorRoleIds)) {
-          return interaction.reply({ content:'❌ Você não possui um cargo autorizado para avaliar.', ephemeral:true });
+          return interaction.reply({ content:'❌ Você não possui um cargo autorizado para avaliar.', flags: MessageFlags.Ephemeral });
         }
 
-        await interaction.deferReply({ ephemeral:true });
+        // Responde DIRETO à interação. A versão anterior usava deferReply + editReply;
+        // se o segundo envio falhasse, o Discord ficava preso em "o bot está pensando".
         const st = setEvalDraft(interaction, { targetId: undefined, score: undefined });
-        return interaction.editReply({ embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) });
+        return interaction.reply({
+          embeds:[evaluationPickerEmbed(st)],
+          components:evaluationPickerComponents(st),
+          flags: MessageFlags.Ephemeral,
+        });
       }
 
       if (interaction.isUserSelectMenu() && interaction.customId === 'cda_eval_pick_user') {
-        await interaction.deferUpdate();
         let st = getEvalDraft(interaction);
         if (!st) {
-          return interaction.followUp({ content:'⚠️ Sua avaliação expirou. Clique em **Avaliar Staff** novamente.', ephemeral:true });
+          return interaction.reply({ content:'⚠️ Sua avaliação expirou. Clique em **Avaliar Staff** novamente.', flags: MessageFlags.Ephemeral });
         }
 
         const targetId = interaction.values[0];
@@ -688,23 +692,25 @@ function setupManagementExtras(client, startupReady = Promise.resolve()) {
           const member = await interaction.guild.members.fetch(targetId).catch(() => null);
           if (!member || !c.evaluation.evaluableRoleIds.some(id => member.roles.cache.has(id))) {
             st = setEvalDraft(interaction, { targetId: undefined });
-            await interaction.editReply({ embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) }).catch(()=>{});
-            return interaction.followUp({ content:'❌ Esse usuário não possui um dos cargos configurados como avaliáveis.', ephemeral:true });
+            return interaction.update({
+              content:'❌ Esse usuário não possui um dos cargos configurados como avaliáveis.',
+              embeds:[evaluationPickerEmbed(st)],
+              components:evaluationPickerComponents(st),
+            });
           }
         }
 
         st = setEvalDraft(interaction, { targetId });
-        return interaction.editReply({ embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) });
+        return interaction.update({ content:null, embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) });
       }
 
       if (interaction.isStringSelectMenu() && interaction.customId === 'cda_eval_pick_score') {
-        await interaction.deferUpdate();
         let st = getEvalDraft(interaction);
         if (!st) {
-          return interaction.followUp({ content:'⚠️ Sua avaliação expirou. Clique em **Avaliar Staff** novamente.', ephemeral:true });
+          return interaction.reply({ content:'⚠️ Sua avaliação expirou. Clique em **Avaliar Staff** novamente.', flags: MessageFlags.Ephemeral });
         }
         st = setEvalDraft(interaction, { score: Number(interaction.values[0]) });
-        return interaction.editReply({ embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) });
+        return interaction.update({ content:null, embeds:[evaluationPickerEmbed(st)], components:evaluationPickerComponents(st) });
       }
 
       if (interaction.isButton() && interaction.customId === 'cda_eval_continue') {
@@ -799,8 +805,18 @@ function setupManagementExtras(client, startupReady = Promise.resolve()) {
         return interaction.update({ embeds:[bugReportEmbed(d.bugs[idx])], components:bugManageComponents(d.bugs[idx]) });
       }
     } catch (e) {
-      console.error('❌ Gestão extras:', e);
-      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) interaction.reply({ content:'❌ Ocorreu um erro ao processar essa ação.', ephemeral:true }).catch(()=>{});
+      console.error('❌ Gestão extras:', e?.stack || e);
+      if (!interaction.isRepliable?.()) return;
+
+      // Nunca deixa uma interação presa em "o bot está pensando".
+      // Se já houve defer, transforma o defer em uma resposta de erro;
+      // caso contrário, responde normalmente.
+      if (interaction.deferred && !interaction.replied) {
+        return interaction.editReply({ content:'❌ Ocorreu um erro ao processar essa ação. Tente novamente.', embeds:[], components:[] }).catch(()=>{});
+      }
+      if (!interaction.replied) {
+        return interaction.reply({ content:'❌ Ocorreu um erro ao processar essa ação. Tente novamente.', flags: MessageFlags.Ephemeral }).catch(()=>{});
+      }
     }
   });
 }
