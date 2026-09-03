@@ -1,0 +1,84 @@
+{
+  "guildId": "1204522348498259968",
+  "teamStaffRoleId": "1204522348544524308",
+  "exStaffRoleId": "",
+  "hierarchy": [
+  {
+    "name": "Criador",
+    "roleId": "1240089734001463319"
+  },
+  {
+    "name": "Owner",
+    "roleId": "1374388080844210248"
+  },
+  {
+    "name": "Co-Owner",
+    "roleId": "1226306542354042913"
+  },
+  {
+    "name": "Responsável Geral",
+    "roleId": "1361532136364052501"
+  },
+  {
+    "name": "Coordenador",
+    "roleId": "1216920779795468318"
+  },
+  {
+    "name": "Gestor",
+    "roleId": "1344814725053153300"
+  },
+  {
+    "name": "Líder Staff",
+    "roleId": "1204522348544524312"
+  },
+  {
+    "name": "Supervisor Geral",
+    "roleId": "1336832303866970203"
+  },
+  {
+    "name": "Supervisor",
+    "roleId": "1216920247978692789"
+  },
+  {
+    "name": "Administrador",
+    "roleId": "1352387376512766042"
+  },
+  {
+    "name": "Moderador",
+    "roleId": "1339404065859440701"
+  },
+  {
+    "name": "Suporte",
+    "roleId": "1216918670706741288"
+  },
+  {
+    "name": "Aluno",
+    "roleId": "1344503178716250194"
+  }
+],
+  "permissionRules": {
+    "basic": [
+      "Administrador",
+      "Moderador",
+      "Suporte",
+      "Aluno"
+    ],
+    "warning": [
+      "Supervisor",
+      "Supervisor Geral"
+    ],
+    "leader": [
+      "Líder Staff",
+      "Gestor"
+    ],
+    "admin": [
+      "Coordenador",
+      "Responsável Geral"
+    ],
+    "max": [
+      "Co-Owner",
+      "Owner",
+      "Criador"
+    ]
+  }
+}

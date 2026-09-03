@@ -1,0 +1,10 @@
+storage/**
+suggestions-config.json
+suggestions-data.json
+management-extras-config.json
+management-extras-data.json
+.env
+node_modules/**
+tickets-config.json
+tickets-state.json
+tickets-ai-prompt.json
