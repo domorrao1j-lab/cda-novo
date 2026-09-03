@@ -667,18 +667,29 @@ function setupManagementExtras(client, startupReady = Promise.resolve()) {
       }
 
       if (interaction.isButton() && interaction.customId === 'cda_eval_start') {
+        // ACK PRIMEIRO, antes de montar qualquer embed/componente. Isso garante que o Discord
+        // receba uma resposta dentro dos 3 segundos mesmo se houver lentidão no Railway/REST.
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         if (c.evaluation.evaluatorRoleIds.length && !hasRole(interaction, c.evaluation.evaluatorRoleIds)) {
-          return interaction.reply({ content:'❌ Você não possui um cargo autorizado para avaliar.', flags: MessageFlags.Ephemeral });
+          return interaction.editReply({ content:'❌ Você não possui um cargo autorizado para avaliar.' });
         }
 
-        // Responde DIRETO à interação. A versão anterior usava deferReply + editReply;
-        // se o segundo envio falhasse, o Discord ficava preso em "o bot está pensando".
-        const st = setEvalDraft(interaction, { targetId: undefined, score: undefined });
-        return interaction.reply({
-          embeds:[evaluationPickerEmbed(st)],
-          components:evaluationPickerComponents(st),
-          flags: MessageFlags.Ephemeral,
-        });
+        try {
+          const st = setEvalDraft(interaction, { targetId: undefined, score: undefined });
+          return await interaction.editReply({
+            content:null,
+            embeds:[evaluationPickerEmbed(st)],
+            components:evaluationPickerComponents(st),
+          });
+        } catch (err) {
+          console.error('❌ Avaliar Staff / abrir painel:', err?.stack || err);
+          return interaction.editReply({
+            content:'❌ Não consegui abrir o formulário de avaliação. O erro foi registrado no console.',
+            embeds:[],
+            components:[],
+          }).catch(() => {});
+        }
       }
 
       if (interaction.isUserSelectMenu() && interaction.customId === 'cda_eval_pick_user') {
