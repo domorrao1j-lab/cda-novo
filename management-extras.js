@@ -356,10 +356,11 @@ function evaluationPickerEmbed(state = {}) {
 }
 
 function evaluationPickerComponents(state = {}) {
+  // Não usa `description` nas opções: a API do Discord rejeitou esse campo
+  // neste menu com BASE_TYPE_MAX_LENGTH em alguns deploys. Mantemos tudo no label.
   const stars = [0,1,2,3,4,5].map(n => new StringSelectMenuOptionBuilder()
-    .setLabel(`${n}/5`)
-    .setValue(String(n))
-    .setDescription(n === 0 ? 'Nota mínima' : `${'⭐'.repeat(n)}${'☆'.repeat(5-n)}`));
+    .setLabel(n === 0 ? '0/5 — Nota mínima' : `${n}/5 — ${'⭐'.repeat(n)}${'☆'.repeat(5-n)}`)
+    .setValue(String(n)));
   return [
     one(new UserSelectMenuBuilder()
       .setCustomId('cda_eval_pick_user')
